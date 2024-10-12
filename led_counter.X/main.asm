@@ -1,4 +1,5 @@
 .equ msb = 0b1000_0000
+.equ reg_size = 8
 .def mask_msb = r1
 
 .org 0x0000
@@ -6,7 +7,7 @@
     ldi r19, msb
     mov mask_msb, r19
     ldi r16, 0xFF
-    ldi r20, 8
+    ldi r20, reg_size
     out DDRD, r16
 loop:
     out PORTD, r19
@@ -14,7 +15,7 @@ loop:
     dec r20
     brne delay
     eor r19, mask_msb
-    ldi r20, 8
+    ldi r20, reg_size
 delay:
     call segundo
     rjmp loop
