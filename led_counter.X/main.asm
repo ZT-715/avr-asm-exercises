@@ -1,7 +1,10 @@
+.equ msb = 0b1000_0000
+.def mask_msb = r1
+
 .org 0x0000
 .cseg
-    ldi r19, 0b1000_0000
-    mov r1, r19
+    ldi r19, msb
+    mov mask_msb, r19
     ldi r16, 0xFF
     ldi r20, 8
     out DDRD, r16
@@ -10,7 +13,7 @@ loop:
     asr r19 
     dec r20
     brne delay
-    eor r19, r1
+    eor r19, mask_msb
     ldi r20, 8
 delay:
     call segundo
