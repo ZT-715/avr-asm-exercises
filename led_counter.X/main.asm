@@ -2,8 +2,8 @@
 .equ reg_size = 8
 .def mask_msb = r1
 
-.org 0x0000
 .cseg
+.org 0x0000
     ldi r19, msb
     mov mask_msb, r19
     ldi r16, 0xFF
