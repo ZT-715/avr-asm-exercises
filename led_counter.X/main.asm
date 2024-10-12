@@ -1,12 +1,18 @@
- .org 0x0000
-
-    ldi r19, 0x01
+.org 0x0000
+.cseg
+    ldi r19, 0b1000_0000
+    mov r1, r19
     ldi r16, 0xFF
+    ldi r20, 8
     out DDRD, r16
 loop:
     out PORTD, r19
-    rol r19 ; carry deve ser adicionado no bit oposto ao shift
-    lsl r19
+    asr r19 
+    dec r20
+    brne delay
+    eor r19, r1
+    ldi r20, 8
+delay:
     call segundo
     rjmp loop
         
