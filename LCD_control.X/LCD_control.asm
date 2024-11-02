@@ -6,7 +6,9 @@
 .equ MODO_ENTRADA = 0b0000_0111
 .equ DESLIGAR_LCD =  0b0000_1000
 .equ LIGAR_LCD = 0b0000_1111
-.equ CONFIG_LCD = 0b0010_0000
+.equ CONFIG_LCD = 0b0010_1000
+.equ CURSOR_R = 0b0001_0100
+.equ RETORNA_CURSOR = 0b0000_0010
 
 .cseg
 .org 0x00
@@ -20,18 +22,32 @@ init:
     ldi r16, 0xFF
     out DDRD, r16
 
-nops:
     rcall LCD_init
     nop
     rcall delay_1s
+
     ldi r16, LIGAR_LCD
     rcall LCD_command
     rcall delay_1s
-    ldi r16, 0b0000_0010
+
+    ldi r16, LIMPAR_LCD
     rcall LCD_command
     rcall delay_1s
-    
-    rjmp nops
+
+    ldi r16, RETORNA_CURSOR
+    rcall LCD_command
+    rcall delay_1s
+
+lp:
+    ldi r16, 0b0100_0001 ; A
+    rcall LCD_char
+    rcall delay_1s
+
+    ldi r16, CURSOR_R
+    rcall LCD_command
+    rcall delay_1s
+
+    rjmp lp
 
 
 LCD_init:
@@ -69,8 +85,26 @@ LCD_init:
     rcall LCD_command
     rcall delay_45us
 ret
+
+; r16 receives char to be displayed
+LCD_char:
+    push r20
+    mov r20, r16
+    andi r16, 0b1111_0000
+    sbi PORTD, RS
+    rcall LCD_4bits
+    mov r16, r20
+    lsl r16
+    lsl r16
+    lsl r16
+    lsl r16
+    andi r16, 0b1111_0000
+    rcall LCD_4bits
+    cbi PORTD, RS
+    pop r20
+ret
+
 ; r16 loaded with command
-; TODO: check if flags E and R are correct
 LCD_command:
     push r20
     mov r20, r16
@@ -88,14 +122,17 @@ ret
 
 ;r16 deve possuír os 4 bits a serem anviados em 0b1111_0000
 LCD_4bits:
+    push r20
+    in r20, PIND
+    andi r20, 0b0000_1111
+    or r16, r20
     out PORTD, r16 
     call delay_45us
     sbi PORTD, E
     call delay_45us
     cbi PORTD, E
     call delay_45us
-    clr r16
-    out PORTD, r16
+    pop r20
     ret
 
 delay_45us:
