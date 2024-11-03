@@ -1,5 +1,5 @@
 .cseg
-.org 0x34
+.org 0x00
 
 .def row = r21
 .def column = r22
@@ -23,6 +23,8 @@
 .equ LINHA_2 = 0x40
 .equ LINHA_4 = 0x54
 
+DISPLAY_TXT: .db " LED 1",0," LED 2",0," LED 3",0,0
+
 init:
     ldi r20, high(RAMEND)
     sts SPH, r20
@@ -44,14 +46,29 @@ init:
     rcall LCD_command
     rcall delay_45ms
 
-    ldi r16, 0
-    ldi r17, 10
-    rcall LCD_position_cursor
+    ldi zh, high(DISPLAY_TXT)
+    ldi zl, low(DISPLAY_TXT << 1)
+
     rcall delay_1s
 
-    ldi r16, 0b1010_0101
+    ldi row, 0
+    ldi column, 0
+
+screen0:
+    mov r16, row
+    ldi r17, 0
+    rcall LCD_position_cursor
+    inc row
+    cpi row, 4
+    breq main_loop
+
+screen0_loop:
+    lpm r16, Z+
+    cpi r16, 0
+    breq screen0
     rcall LCD_char
-    rcall delay_1s
+    
+    rjmp screen0_loop
 
 main_loop:
     nop
@@ -145,6 +162,7 @@ LCD_char:
     rcall LCD_4bits
     cbi PORTD, RS
     pop r20
+    rcall delay_45ms
 ret
 
 ; r16 loaded with command
