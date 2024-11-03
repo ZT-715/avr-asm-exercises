@@ -1,17 +1,24 @@
+.cseg
+.org 0x34
+
 .equ RS = 2
 .equ E = 3
 .equ PD = PORTD
 
 .equ LIMPAR_LCD = 0b0000_0001
-.equ MODO_ENTRADA = 0b0000_0111
+.equ MODO_ENTRADA = 0b0000_0110
 .equ DESLIGAR_LCD =  0b0000_1000
 .equ LIGAR_LCD = 0b0000_1111
 .equ CONFIG_LCD = 0b0010_1000
+.equ POSICIONA_CURSOR = 0b1000_0000 ; 1AAA_AAAA
 .equ CURSOR_R = 0b0001_0100
+.equ CURSOR_L = 0b0001_0000
 .equ RETORNA_CURSOR = 0b0000_0010
 
-.cseg
-.org 0x00
+.equ LINHA_1 = 0x00
+.equ LINHA_3 = 0x14
+.equ LINHA_2 = 0x40
+.equ LINHA_4 = 0x54
 
 init:
     ldi r20, high(RAMEND)
@@ -23,7 +30,7 @@ init:
     out DDRD, r16
 
     rcall LCD_init
-    nop
+    
     rcall delay_1s
 
     ldi r16, LIGAR_LCD
@@ -38,17 +45,48 @@ init:
     rcall LCD_command
     rcall delay_1s
 
-lp:
-    ldi r16, 0b0100_0001 ; A
+main_loop:
+    ldi r16, LINHA_1
+    rcall LCD_position
+    rcall delay_1s
+
+    ldi r16, 0b0011_0001
     rcall LCD_char
     rcall delay_1s
 
-    ldi r16, CURSOR_R
-    rcall LCD_command
+    ldi r16, LINHA_2
+    rcall LCD_position
     rcall delay_1s
 
-    rjmp lp
+    ldi r16, 0b0011_0010
+    rcall LCD_char
+    rcall delay_1s
 
+    ldi r16, LINHA_3
+    rcall LCD_position
+    rcall delay_1s
+
+    ldi r16, 0b0011_0011
+    rcall LCD_char
+    rcall delay_1s
+
+    ldi r16, LINHA_4
+    rcall LCD_position
+    rcall delay_1s
+
+    ldi r16, 0b0011_0100
+    rcall LCD_char
+    rcall delay_1s
+
+rjmp main_loop
+
+    
+
+; r16 recives position 0-80
+LCD_position:
+    ori r16, POSICIONA_CURSOR
+    rcall LCD_command
+    ret
 
 LCD_init:
     rcall delay_45ms
