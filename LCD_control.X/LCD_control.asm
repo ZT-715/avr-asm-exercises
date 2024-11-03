@@ -1,6 +1,9 @@
 .cseg
 .org 0x34
 
+.def row = r21
+.def column = r22
+
 .equ RS = 2
 .equ E = 3
 .equ PD = PORTD
@@ -35,56 +38,58 @@ init:
 
     ldi r16, LIGAR_LCD
     rcall LCD_command
-    rcall delay_1s
+    rcall delay_45ms
 
     ldi r16, LIMPAR_LCD
     rcall LCD_command
+    rcall delay_45ms
+
+    ldi r16, 0
+    ldi r17, 10
+    rcall LCD_position_cursor
     rcall delay_1s
 
-    ldi r16, RETORNA_CURSOR
-    rcall LCD_command
+    ldi r16, 0b1010_0101
+    rcall LCD_char
     rcall delay_1s
 
 main_loop:
-    ldi r16, LINHA_1
-    rcall LCD_position
-    rcall delay_1s
-
-    ldi r16, 0b0011_0001
-    rcall LCD_char
-    rcall delay_1s
-
-    ldi r16, LINHA_2
-    rcall LCD_position
-    rcall delay_1s
-
-    ldi r16, 0b0011_0010
-    rcall LCD_char
-    rcall delay_1s
-
-    ldi r16, LINHA_3
-    rcall LCD_position
-    rcall delay_1s
-
-    ldi r16, 0b0011_0011
-    rcall LCD_char
-    rcall delay_1s
-
-    ldi r16, LINHA_4
-    rcall LCD_position
-    rcall delay_1s
-
-    ldi r16, 0b0011_0100
-    rcall LCD_char
-    rcall delay_1s
-
+    nop
 rjmp main_loop
 
-    
 
-; r16 recives position 0-80
-LCD_position:
-    ori r16, POSICIONA_CURSOR
+; r16 recives line 0-3
+; r17 receives column 0-20
+LCD_position_cursor:
+    cpi r16, 0
+    breq line_1
+
+    cpi r16, 1
+    breq line_2
+
+    cpi r16, 2
+    breq line_3
+
+    cpi r16, 3
+    breq line_4
+
+line_1:
+    ori r17, LINHA_1
+    rjmp LCD_pos
+line_2:
+    ori r17, LINHA_2
+    rjmp LCD_pos
+line_3:
+    ori r17, LINHA_3
+    rjmp LCD_pos
+line_4:
+    ori r17, LINHA_4
+    rjmp LCD_pos
+
+; r17 recives position 0-80 (original LCD mapping)
+LCD_pos:
+    ori r17, POSICIONA_CURSOR
+    mov r16, r17
     rcall LCD_command
     ret
 
