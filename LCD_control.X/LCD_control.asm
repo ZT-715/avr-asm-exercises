@@ -1,8 +1,8 @@
-.cseg
-.org 0x00
-
 .def row = r21
 .def column = r22
+.def select = r23
+.def row_change = r24
+
 
 .equ RS = 2
 .equ E = 3
@@ -23,13 +23,37 @@
 .equ LINHA_2 = 0x40
 .equ LINHA_4 = 0x54
 
-DISPLAY_TXT: .db " LED 1",0," LED 2",0," LED 3",0,0
+.cseg
+.org 0x00                
+    rjmp init          
+
+.org 0x0006
+    rjmp switch_isr  ; Jump to the pin change interrupt service routine
+
+DISPLAY_TXT: .db " LED 1: X",0," LED 2: X",0," LED 3: X",0,0
+
 
 init:
     ldi r20, high(RAMEND)
     sts SPH, r20
     ldi r20, low(RAMEND)
     sts SPL, r20
+
+    clr r16
+    out DDRB, r16  
+
+    ser r16
+    out DDRC, r16
+
+    clr r16
+    out PORTC, r16
+
+    ; PCI for PORTB
+    ldi r16, (1 << PCIE0) 
+    sts PCICR , r16
+
+    ldi r16, (1 << PCINT0) | (1 << PCINT1) | (1 << PCINT2) 
+    sts PCMSK0, r16
 
     ldi r16, 0xFF
     out DDRD, r16
@@ -49,10 +73,11 @@ init:
     ldi zh, high(DISPLAY_TXT)
     ldi zl, low(DISPLAY_TXT << 1)
 
-    rcall delay_1s
-
     ldi row, 0
     ldi column, 0
+
+    ldi r16, 0b0000_0111 
+    out PORTB, r16
 
 screen0:
     mov r16, row
@@ -60,7 +85,7 @@ screen0:
     rcall LCD_position_cursor
     inc row
     cpi row, 4
-    breq main_loop
+    breq main
 
 screen0_loop:
     lpm r16, Z+
@@ -70,10 +95,105 @@ screen0_loop:
     
     rjmp screen0_loop
 
-main_loop:
-    nop
+main:
+    ldi row, 0
+    ldi column, 0
+    ldi r17, 0
+ main_loop:
+    cpi select, 0
+    brne LCD_select
+
+    cpi row_change, 0
+    brne LCD_row_change
+
+    mov r16, row
+    ldi r17, 8
+    rcall LCD_position_cursor
+
+    sei
+    rcall delay_5ms
+    cli
+
+    wait_release:
+        in r16, PINB
+        andi r16, 0b0000_0111
+        cpi r16, 0b0000_0111
+        brne wait_release
+
 rjmp main_loop
 
+LCD_row_change:
+    sbrc row_change, 0
+    inc row
+    sbrc row_change, 1
+    dec row
+    andi row, 0b0000_0011
+    clr row_change
+    rjmp main_loop
+
+LCD_select:
+    clr select
+
+    cpi row, 0
+    breq LED1
+
+    cpi row, 1
+    breq LED2
+
+    cpi row, 2
+    breq LED3
+
+    rjmp main_loop
+
+    LED1:
+        in r16, PINC
+        ldi r17, 1
+        eor r16, r17
+        out PORTC, r16
+
+        ser r16
+        sbic PINC, 0
+        clr r16
+        
+        rjmp LCD_select1
+
+    LED2:
+        in r16, PINC
+        ldi r17, 2
+        eor r16, r17
+        out PORTC, r16
+        
+        ser r16
+        sbic PINC, 1
+        clr r16
+        
+        rjmp LCD_select1
+
+    LED3:
+        in r16, PINC
+        ldi r17, 4
+        eor r16, r17
+        out PORTC, r16
+        
+        ser r16
+        sbic PINC, 2
+        clr r16
+        
+    LCD_select1:
+        rcall LCD_mark
+        rjmp main_loop
+
+LCD_mark:
+    cpi r16, 0
+    breq LED_X
+    LED_V:
+    ldi r16, 'V'
+    rjmp write_mark
+    LED_X:
+        ldi r16, 'X'
+    write_mark:
+        rcall LCD_char
+        ret
 
 ; r16 recives line 0-3
 ; r17 receives column 0-20
@@ -162,7 +282,6 @@ LCD_char:
     rcall LCD_4bits
     cbi PORTD, RS
     pop r20
-    rcall delay_45ms
 ret
 
 ; r16 loaded with command
@@ -254,3 +373,18 @@ delay_1s:
         brne loop5
     pop r20
     ret
+
+switch_isr:
+    in r18, PINB         
+   
+ ; Check each pin
+    sbrs r18, 0          
+    inc select
+
+    sbrs r18, 1          
+    ldi row_change, 1
+
+    sbrs r18, 2          
+    ldi row_change, 2
+
+    reti
