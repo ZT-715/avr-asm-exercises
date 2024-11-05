@@ -30,7 +30,7 @@
 .org 0x0006
     rjmp switch_isr  ; Jump to the pin change interrupt service routine
 
-DISPLAY_TXT: .db " LED 1: X",0," LED 2: X",0," LED 3: X",0,0
+DISPLAY_TXT: .db " LED 1: 0",0," LED 2: 0",0," LED 3: 0",0,0
 
 
 init:
@@ -187,10 +187,10 @@ LCD_mark:
     cpi r16, 0
     breq LED_X
     LED_V:
-    ldi r16, 'V'
+    ldi r16, '0'
     rjmp write_mark
     LED_X:
-        ldi r16, 'X'
+        ldi r16, '1'
     write_mark:
         rcall LCD_char
         ret
